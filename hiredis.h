@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) 2009-2011, Salvatore Sanfilippo <antirez at gmail dot com>
  * Copyright (c) 2010-2014, Pieter Noordhuis <pcnoordhuis at gmail dot com>
  * Copyright (c) 2015, Matt Stancliff <matt at genges dot com>,
@@ -35,7 +35,21 @@
 #define __HIREDIS_H
 #include "read.h"
 #include <stdarg.h> /* for va_list */
+#if defined(_WIN32) || defined(_WIN64)
+#include <time.h>
+#include <io.h>
+
+#include <Winsock2.h>
+#include <Ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+
+#define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
+#define strcasecmp stricmp
+#define strncasecmp strnicmp
+
+#else
 #include <sys/time.h> /* for struct timeval */
+#endif
 #include <stdint.h> /* uintXX_t, etc */
 #include "sds.h" /* for sds */
 

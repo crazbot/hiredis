@@ -35,6 +35,16 @@
 
 #define SDS_MAX_PREALLOC (1024*1024)
 
+#if defined(_WIN32) || defined(_WIN64)
+#define __attribute__(attr) 
+#pragma warning(push)
+#pragma warning(disable:4244)	// __int64 to uint16_t
+#pragma warning(disable:4267)	// size_t to int
+#pragma warning(disable:4293)	// shift count negative or too big, undefined behavior
+#pragma warning(disable:4800)	// int to true or false
+#pragma warning(disable:4996)	// unsafe
+#endif
+
 #include <sys/types.h>
 #include <stdarg.h>
 #include <stdint.h>

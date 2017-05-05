@@ -34,7 +34,9 @@
 #include "fmacros.h"
 #include <string.h>
 #include <stdlib.h>
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <unistd.h>
+#endif
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
@@ -616,8 +618,12 @@ static redisContext *redisContextInit(void) {
 void redisFree(redisContext *c) {
     if (c == NULL)
         return;
-    if (c->fd > 0)
+	if (c->fd > 0)
+#if defined(_WIN32) || defined(_WIN64)
+		closesocket(c->fd);
+#else
         close(c->fd);
+#endif
     if (c->obuf != NULL)
         sdsfree(c->obuf);
     if (c->reader != NULL)

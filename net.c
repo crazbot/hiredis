@@ -34,6 +34,21 @@
 
 #include "fmacros.h"
 #include <sys/types.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <WinSock2.h>
+#include <windows.h>
+
+#pragma warning(push)
+#pragma warning(disable:4244)	// __int64 to uint16_t
+#pragma warning(disable:4267)	// size_t to int
+#pragma warning(disable:4293)	// shift count negative or too big, undefined behavior
+#pragma warning(disable:4800)	// int to true or false
+#pragma warning(disable:4996)	// unsafe
+#pragma warning(disable:4133)	// incompatible types
+#pragma warning(disable:391)	// format string
+
+#else
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/un.h>
@@ -41,13 +56,15 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <netdb.h>
+#include <poll.h>
+#endif
+
 #include <fcntl.h>
 #include <string.h>
-#include <netdb.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <poll.h>
 #include <limits.h>
 #include <stdlib.h>
 
@@ -59,7 +76,11 @@ void __redisSetError(redisContext *c, int type, const char *str);
 
 static void redisContextCloseFd(redisContext *c) {
     if (c && c->fd >= 0) {
+#if defined(_WIN32) || defined(_WIN64)
+		closesocket(c->fd);
+#else
         close(c->fd);
+#endif
         c->fd = -1;
     }
 }
@@ -103,6 +124,19 @@ static int redisCreateSocket(redisContext *c, int type) {
 static int redisSetBlocking(redisContext *c, int blocking) {
     int flags;
 
+#if defined(_WIN32) || defined(_WIN64)
+	if (blocking)
+		flags = 1;
+	else
+		flags = 0;
+
+	if (ioctlsocket(c->fd, FIONBIO, &flags) == SOCKET_ERROR) {
+		__redisSetErrorFromErrno(c, REDIS_ERR_IO, "ioctlsocket(FIONBIO)");
+		redisContextCloseFd(c);
+		return REDIS_ERR;
+	}
+
+#else
     /* Set the socket nonblocking.
      * Note that fcntl(2) for F_GETFL and F_SETFL can't be
      * interrupted by a signal. */
@@ -122,6 +156,8 @@ static int redisSetBlocking(redisContext *c, int blocking) {
         redisContextCloseFd(c);
         return REDIS_ERR;
     }
+#endif
+
     return REDIS_OK;
 }
 
@@ -211,7 +247,11 @@ static int redisContextWaitReady(redisContext *c, long msec) {
     if (errno == EINPROGRESS) {
         int res;
 
+#if defined(_WIN32) || defined(_WIN64)
+		if ((res = WSAPoll(wfd, 1, msec)) == -1) {
+#else
         if ((res = poll(wfd, 1, msec)) == -1) {
+#endif
             __redisSetErrorFromErrno(c, REDIS_ERR_IO, "poll(2)");
             redisContextCloseFd(c);
             return REDIS_ERR;
@@ -235,7 +275,12 @@ static int redisContextWaitReady(redisContext *c, long msec) {
 
 int redisCheckSocketError(redisContext *c) {
     int err = 0;
+
+#if defined(_WIN32) || defined(_WIN64)
+	int errlen = sizeof(err);
+#else
     socklen_t errlen = sizeof(err);
+#endif
 
     if (getsockopt(c->fd, SOL_SOCKET, SO_ERROR, &err, &errlen) == -1) {
         __redisSetErrorFromErrno(c,REDIS_ERR_IO,"getsockopt(SO_ERROR)");
@@ -427,6 +472,8 @@ int redisContextConnectBindTcp(redisContext *c, const char *addr, int port,
     return _redisContextConnectTcp(c, addr, port, timeout, source_addr);
 }
 
+#if defined(_WIN32) || defined(_WIN64)
+#else
 int redisContextConnectUnix(redisContext *c, const char *path, const struct timeval *timeout) {
     int blocking = (c->flags & REDIS_BLOCK);
     struct sockaddr_un sa;
@@ -475,3 +522,4 @@ int redisContextConnectUnix(redisContext *c, const char *path, const struct time
     c->flags |= REDIS_CONNECTED;
     return REDIS_OK;
 }
+#endif
