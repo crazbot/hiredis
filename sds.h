@@ -43,6 +43,7 @@
 #pragma warning(disable:4293)	// shift count negative or too big, undefined behavior
 #pragma warning(disable:4800)	// int to true or false
 #pragma warning(disable:4996)	// unsafe
+#pragma warning(disable:4200)	// zero-sized array
 #endif
 
 #include <sys/types.h>
