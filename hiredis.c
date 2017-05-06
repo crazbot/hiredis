@@ -805,9 +805,17 @@ int redisBufferRead(redisContext *c) {
     if (c->err)
         return REDIS_ERR;
 
+#if defined(_WIN32) || defined(_WIN64)
+	nread = recv(c->fd, buf, sizeof(buf), 0);
+#else
     nread = read(c->fd,buf,sizeof(buf));
+#endif
     if (nread == -1) {
+#if defined(_WIN32) || defined(_WIN64)
+		if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
+#else
         if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
+#endif
             /* Try again later */
         } else {
             __redisSetError(c,REDIS_ERR_IO,NULL);
@@ -842,9 +850,17 @@ int redisBufferWrite(redisContext *c, int *done) {
         return REDIS_ERR;
 
     if (sdslen(c->obuf) > 0) {
+#if defined(_WIN32) || defined(_WIN64)
+		nwritten = send(c->fd, c->obuf, sdslen(c->obuf), 0);
+#else
         nwritten = write(c->fd,c->obuf,sdslen(c->obuf));
+#endif
         if (nwritten == -1) {
-            if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
+#if defined(_WIN32) || defined(_WIN64)
+			if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
+#else
+			if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
+#endif
                 /* Try again later */
             } else {
                 __redisSetError(c,REDIS_ERR_IO,NULL);

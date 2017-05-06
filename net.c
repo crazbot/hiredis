@@ -473,6 +473,10 @@ int redisContextConnectBindTcp(redisContext *c, const char *addr, int port,
 }
 
 #if defined(_WIN32) || defined(_WIN64)
+int redisContextConnectUnix(redisContext *c, const char *path, const struct timeval *timeout) {
+	sprintf(c->errstr, "redisContextConnectUnix() is not support on windows!");
+	return REDIS_ERR;
+}
 #else
 int redisContextConnectUnix(redisContext *c, const char *path, const struct timeval *timeout) {
     int blocking = (c->flags & REDIS_BLOCK);
