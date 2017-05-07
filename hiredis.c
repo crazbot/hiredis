@@ -651,7 +651,11 @@ int redisReconnect(redisContext *c) {
     memset(c->errstr, '\0', strlen(c->errstr));
 
     if (c->fd > 0) {
+#if defined(_WIN32) || defined(_WIN64)
+		closesocket(c->fd);
+#else
         close(c->fd);
+#endif
     }
 
     sdsfree(c->obuf);
