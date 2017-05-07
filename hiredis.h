@@ -35,9 +35,10 @@
 #define __HIREDIS_H
 #include "read.h"
 #include <stdarg.h> /* for va_list */
+
 #if defined(_WIN32) || defined(_WIN64)
+
 #include <time.h>
-#include <io.h>
 
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
@@ -48,8 +49,11 @@
 #define strncasecmp strnicmp
 
 #else
+
 #include <sys/time.h> /* for struct timeval */
+
 #endif
+
 #include <stdint.h> /* uintXX_t, etc */
 #include "sds.h" /* for sds */
 

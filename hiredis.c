@@ -811,13 +811,15 @@ int redisBufferRead(redisContext *c) {
     nread = read(c->fd,buf,sizeof(buf));
 #endif
     if (nread == -1) {
-#if defined(_WIN32) || defined(_WIN64)
-		if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
-#else
         if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
-#endif
             /* Try again later */
         } else {
+#if defined(_WIN32) || defined(_WIN64)
+		    if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
+                /* Try again later */
+                return REDIS_OK;
+            }
+#endif
             __redisSetError(c,REDIS_ERR_IO,NULL);
             return REDIS_ERR;
         }
@@ -856,13 +858,15 @@ int redisBufferWrite(redisContext *c, int *done) {
         nwritten = write(c->fd,c->obuf,sdslen(c->obuf));
 #endif
         if (nwritten == -1) {
-#if defined(_WIN32) || defined(_WIN64)
-			if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
-#else
 			if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
-#endif
                 /* Try again later */
             } else {
+#if defined(_WIN32) || defined(_WIN64)
+		    if (c->flags & REDIS_BLOCK && WSAGetLastError() == WSAEWOULDBLOCK) {
+                /* Try again later */
+                return REDIS_OK;
+            }
+#endif
                 __redisSetError(c,REDIS_ERR_IO,NULL);
                 return REDIS_ERR;
             }
